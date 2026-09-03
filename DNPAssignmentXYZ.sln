@@ -1,8 +1,28 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Server", "Server", "{0E4F988A-6AF0-4040-846A-3592470A9722}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Entities", "Entities\Entities.csproj", "{3CCFEC33-001A-4003-9352-4060B8DFB226}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RepositoryContract", "RepositoryContract\RepositoryContract.csproj", "{5EF9773D-5F42-4A61-8C96-6530E51EADF4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{3CCFEC33-001A-4003-9352-4060B8DFB226} = {0E4F988A-6AF0-4040-846A-3592470A9722}
+		{5EF9773D-5F42-4A61-8C96-6530E51EADF4} = {0E4F988A-6AF0-4040-846A-3592470A9722}
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{3CCFEC33-001A-4003-9352-4060B8DFB226}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3CCFEC33-001A-4003-9352-4060B8DFB226}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3CCFEC33-001A-4003-9352-4060B8DFB226}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3CCFEC33-001A-4003-9352-4060B8DFB226}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5EF9773D-5F42-4A61-8C96-6530E51EADF4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5EF9773D-5F42-4A61-8C96-6530E51EADF4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5EF9773D-5F42-4A61-8C96-6530E51EADF4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5EF9773D-5F42-4A61-8C96-6530E51EADF4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
