@@ -8,6 +8,18 @@ public class PostInMemoryRepository : IPostRepository
 {
     private List<Post> posts = new List<Post>();
     
+    public PostInMemoryRepository()
+    {
+        CreateDummyData();
+    }
+
+    private void CreateDummyData()
+    {
+        posts.Add(new Post { Id = 1, Title = "Alexander Parakeet Diet", Body = "What is the best daily mix for a parakeet like Greeny?", UserId = 1 });
+        posts.Add(new Post { Id = 2, Title = "Digital Piano Comparison", Body = "Yamaha P-145 B vs Casio CDP-S110 BK. Thoughts?", UserId = 1 });
+        posts.Add(new Post { Id = 3, Title = "Software Engineering Exams", Body = "Are the VIA University College exams usually open book?", UserId = 2 });
+    }
+    
     public Task<Post> AddAsync(Post post)
     {
         post.Id = posts.Any() 
