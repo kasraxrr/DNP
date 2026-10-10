@@ -3,7 +3,7 @@ using FileRepositories;
 using RepositoryContract;
 
 Console.WriteLine("Starting the CLI ...");
-IUserRepository userRepository=new UserFileRepositories();
+IUserRepository userRepository=new UserFileRepository();
 IPostRepository postRepository=new PostFileRepository();
 ICommentRepository commentRepository=new CommentFileRepository();
 

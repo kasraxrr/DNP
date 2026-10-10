@@ -4,11 +4,11 @@ using RepositoryContract;
 
 namespace FileRepositories;
 
-public class UserFileRepositories : IUserRepository
+public class UserFileRepository : IUserRepository
 {
     private readonly string filePath = "users.json";
 
-    public UserFileRepositories()
+    public UserFileRepository()
     {
         if (!File.Exists(filePath))
         {
