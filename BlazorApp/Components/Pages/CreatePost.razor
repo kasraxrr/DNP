@@ -1,0 +1,67 @@
+@page "/CreatePost"
+@inject IPostService postService
+@inject NavigationManager navMgr
+
+<PageTitle>New post</PageTitle>
+
+<div class="page-wrap">
+    <div class="page-header">
+        <h1>New post</h1>
+        <p>Share something with the forum.</p>
+    </div>
+
+    <div class="panel">
+        @if (!string.IsNullOrEmpty(message))
+        {
+            <div class="alert-msg error">@message</div>
+        }
+
+        <div class="field">
+            <label>Title</label>
+            <input type="text" @bind="title" placeholder="Give your post a title"/>
+        </div>
+
+        <div class="field">
+            <label>Body</label>
+            <textarea @bind="body" placeholder="Write your post here..."></textarea>
+        </div>
+
+        <button class="btn-main" @onclick="Create" disabled="@isSaving">
+            @(isSaving ? "Publishing..." : "Publish post")
+        </button>
+    </div>
+</div>
+
+@code {
+    private string title = string.Empty;
+    private string body = string.Empty;
+    private string message = string.Empty;
+    private bool isSaving;
+
+    private async Task Create()
+    {
+        message = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(body))
+        {
+            message = "Please fill in both title and body.";
+            return;
+        }
+
+        isSaving = true;
+        try
+        {
+            // No login yet, so every post is written by user 1 (see assignment).
+            CreatePostDto dto = new() { Title = title, Body = body, UserId = 1 };
+            PostDto created = await postService.AddPostAsync(dto);
+
+            navMgr.NavigateTo($"/ViewPost/{created.Id}");
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            message = e.Message;
+        }
+        isSaving = false;
+    }
+}

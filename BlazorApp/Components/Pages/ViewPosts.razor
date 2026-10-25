@@ -1,0 +1,60 @@
+@page "/ViewPosts"
+@inject IPostService postService
+
+<PageTitle>Posts</PageTitle>
+
+<div class="page-wrap">
+    <div class="page-header with-action">
+        <div>
+            <h1>Posts</h1>
+            <p>Click a post to read it and join the discussion.</p>
+        </div>
+        <a href="CreatePost" class="btn-main">+ New post</a>
+    </div>
+
+    @if (!string.IsNullOrEmpty(message))
+    {
+        <div class="alert-msg error">@message</div>
+    }
+    else if (posts == null)
+    {
+        <p class="muted"><em>Loading...</em></p>
+    }
+    else if (posts.Count == 0)
+    {
+        <div class="panel empty-state">
+            <p>No posts yet.</p>
+            <a href="CreatePost" class="btn-main">Write the first one</a>
+        </div>
+    }
+    else
+    {
+        <div class="post-list">
+            @foreach (var post in posts)
+            {
+                <NavLink class="post-card" href="@($"ViewPost/{post.Id}")">
+                    <h2>@post.Title</h2>
+                    <span class="arrow">→</span>
+                </NavLink>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private List<PostDto>? posts;
+    private string message = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            posts = await postService.GetAllPostsAsync();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            message = e.Message;
+        }
+    }
+}

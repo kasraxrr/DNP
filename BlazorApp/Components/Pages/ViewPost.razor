@@ -1,0 +1,128 @@
+@page "/ViewPost/{id:int}"
+@using ApiContracts
+@inject IPostService postService
+@inject IUserService userService
+@inject ICommentService commentService
+
+<PageTitle>@(post?.Title ?? "Post")</PageTitle>
+
+<div class="page-wrap">
+    <a href="ViewPosts" class="back-link">← All posts</a>
+
+    @if (!string.IsNullOrEmpty(loadError))
+    {
+        <div class="alert-msg error">@loadError</div>
+    }
+    else if (post == null)
+    {
+        <p class="muted"><em>Loading...</em></p>
+    }
+    else
+    {
+        <div class="panel">
+            <h1 class="post-title">@post.Title</h1>
+
+            <div class="author">
+                <div class="avatar">@(string.IsNullOrEmpty(authorName) ? "?" : authorName.Substring(0, 1).ToUpper())</div>
+                <div>
+                    <div class="author-name">@authorName</div>
+                    <div class="muted small">Author</div>
+                </div>
+            </div>
+
+            <div class="post-body">@post.Body</div>
+        </div>
+
+        <div class="comments">
+            <h2>Comments <span class="count-badge">@comments.Count</span></h2>
+
+            @if (comments.Count == 0)
+            {
+                <p class="muted">No comments yet. Be the first!</p>
+            }
+            else
+            {
+                @foreach (var comment in comments)
+                {
+                    <div class="comment">@comment.Body</div>
+                }
+            }
+
+            <div class="panel comment-form">
+                @if (!string.IsNullOrEmpty(message))
+                {
+                    <div class="alert-msg error">@message</div>
+                }
+
+                <div class="field">
+                    <label>Add a comment</label>
+                    <textarea @bind="commentBody" placeholder="Write a comment..."></textarea>
+                </div>
+
+                <button class="btn-main" @onclick="AddComment" disabled="@isSaving">
+                    @(isSaving ? "Posting..." : "Post comment")
+                </button>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int id { get; set; }
+
+    private PostDto? post;
+    private string authorName = "?";
+    private List<CommentDto> comments = new();
+
+    private string commentBody = string.Empty;
+    private string message = string.Empty;
+    private string loadError = string.Empty;
+    private bool isSaving;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            post = await postService.GetPostAsync(id);
+
+            UserDto author = await userService.GetUserAsync(post.UserId);
+            authorName = author.UserName;
+
+            comments = await commentService.GetCommentsFromPostAsync(id);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            loadError = e.Message;
+        }
+    }
+
+    private async Task AddComment()
+    {
+        message = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(commentBody))
+        {
+            message = "Write something first.";
+            return;
+        }
+
+        isSaving = true;
+        try
+        {
+            // No login yet, so every comment is written by user 1 (see assignment).
+            CreateCommentDto dto = new() { Body = commentBody, PostId = id, UserId = 1 };
+            await commentService.AddCommentAsync(dto);
+
+            comments = await commentService.GetCommentsFromPostAsync(id);
+            commentBody = string.Empty;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            message = e.Message;
+        }
+        isSaving = false;
+    }
+}

@@ -1,0 +1,72 @@
+@page "/CreateUser"
+@using ApiContracts
+@inject IUserService userService
+
+<PageTitle>Create user</PageTitle>
+
+<div class="page-wrap">
+    <div class="page-header">
+        <h1>Create user</h1>
+        <p>Add a new user to the forum.</p>
+    </div>
+
+    <div class="panel">
+        @if (!string.IsNullOrEmpty(message))
+        {
+            <div class="alert-msg @(isError ? "error" : "success")">@message</div>
+        }
+
+        <div class="field">
+            <label>Username</label>
+            <input type="text" @bind="userName" placeholder="e.g. kasra"/>
+        </div>
+
+        <div class="field">
+            <label>Password</label>
+            <input type="password" @bind="password" placeholder="••••••••"/>
+        </div>
+
+        <button class="btn-main" @onclick="Create" disabled="@isSaving">
+            @(isSaving ? "Creating..." : "Create user")
+        </button>
+    </div>
+</div>
+
+@code {
+    private string userName = string.Empty;
+    private string password = string.Empty;
+    private string message = string.Empty;
+    private bool isError;
+    private bool isSaving;
+
+    private async Task Create()
+    {
+        message = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(userName) || string.IsNullOrWhiteSpace(password))
+        {
+            isError = true;
+            message = "Please fill in both username and password.";
+            return;
+        }
+
+        isSaving = true;
+        try
+        {
+            CreateUserDto dto = new() { UserName = userName, Password = password };
+            UserDto created = await userService.AddUserAsync(dto);
+
+            isError = false;
+            message = $"User \"{created.UserName}\" was created (id {created.Id}).";
+            userName = string.Empty;
+            password = string.Empty;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            isError = true;
+            message = e.Message;
+        }
+        isSaving = false;
+    }
+}
