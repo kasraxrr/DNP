@@ -14,3 +14,21 @@ Content-Type: application/json
 
 ### Get all posts
 GET {{WebAPI_HostAddress}}/posts
+
+### Login - correct password -> 200 + UserDto
+POST {{WebAPI_HostAddress}}/auth/login
+Content-Type: application/json
+
+{ "userName": "bob", "password": "1234" }
+
+### Login - wrong password -> 401
+POST {{WebAPI_HostAddress}}/auth/login
+Content-Type: application/json
+
+{ "userName": "bob", "password": "wrong" }
+
+### Login - unknown user -> 401
+POST {{WebAPI_HostAddress}}/auth/login
+Content-Type: application/json
+
+{ "userName": "nobody", "password": "1234" }
