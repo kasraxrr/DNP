@@ -2,6 +2,26 @@
 
 <PageTitle>Home</PageTitle>
 
-<h1>Hello, world!</h1>
+<div class="page-wrap">
+    <div class="page-header">
+        <h1>Forum</h1>
+        <p>Here you can browse interesting posts.</p>
+    </div>
 
-Welcome to your new app.
+    <div class="panel">
+        <AuthorizeView>
+            <Authorized>
+                <h3>Hello, @context.User.Identity?.Name</h3>
+                <p class="muted">You're logged in, so you can write posts and comments.</p>
+                <a href="ViewPosts" class="btn-main">Browse posts</a>
+                <a href="CreatePost" class="btn-main" style="margin-left: .5rem;">+ New post</a>
+            </Authorized>
+            <NotAuthorized>
+                <h3>You are not logged in</h3>
+                <p class="muted">You can read posts, but you need to log in to write anything.</p>
+                <a href="login" class="btn-main">Go to login</a>
+                <a href="ViewPosts" class="btn-main" style="margin-left: .5rem;">Browse posts</a>
+            </NotAuthorized>
+        </AuthorizeView>
+    </div>
+</div>

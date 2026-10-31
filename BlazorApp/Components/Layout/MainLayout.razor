@@ -1,4 +1,6 @@
 ﻿@inherits LayoutComponentBase
+@inject AuthenticationStateProvider AuthProvider
+@inject NavigationManager navMgr
 
 <div class="page">
     <div class="sidebar">
@@ -7,7 +9,17 @@
 
     <main>
         <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+            <AuthorizeView>
+                <Authorized>
+                    <span class="auth-status">
+                        Logged in as <strong>@context.User.Identity?.Name</strong>
+                        <button class="link-btn" @onclick="LogoutAsync">Log out</button>
+                    </span>
+                </Authorized>
+                <NotAuthorized>
+                    <a href="login">Log in</a>
+                </NotAuthorized>
+            </AuthorizeView>
         </div>
 
         <article class="content px-4">
@@ -21,3 +33,11 @@
     <a href="." class="reload">Reload</a>
     <span class="dismiss">🗙</span>
 </div>
+
+@code {
+    private async Task LogoutAsync()
+    {
+        await ((SimpleAuthProvider)AuthProvider).LogoutAsync();
+        navMgr.NavigateTo("/");
+    }
+}

@@ -1,0 +1,81 @@
+@page "/login"
+@inject AuthenticationStateProvider AuthProvider
+@inject NavigationManager navMgr
+
+<PageTitle>Log in</PageTitle>
+
+<div class="page-wrap">
+    <AuthorizeView>
+        <NotAuthorized>
+            <div class="page-header">
+                <h1>Log in</h1>
+                <p>Log in to write posts and comments.</p>
+            </div>
+
+            <div class="panel">
+                @if (!string.IsNullOrEmpty(errorLabel))
+                {
+                    <div class="alert-msg error">@errorLabel</div>
+                }
+
+                <div class="field">
+                    <label>Username</label>
+                    <input type="text" @bind="userName" placeholder="e.g. kasra"/>
+                </div>
+
+                <div class="field">
+                    <label>Password</label>
+                    <input type="password" @bind="password" placeholder="••••••••"/>
+                </div>
+
+                <button class="btn-main" @onclick="LoginAsync" disabled="@isBusy">
+                    @(isBusy ? "Logging in..." : "Log in")
+                </button>
+
+                <p class="muted small" style="margin-top: 1rem;">
+                    No account yet? <a href="CreateUser">Create a user</a>
+                </p>
+            </div>
+        </NotAuthorized>
+
+        <Authorized>
+            <div class="page-header">
+                <h1>Hello, @context.User.Identity?.Name</h1>
+                <p>You are logged in.</p>
+            </div>
+            <a href="ViewPosts" class="btn-main">Go to posts</a>
+        </Authorized>
+    </AuthorizeView>
+</div>
+
+@code {
+    private string userName = string.Empty;
+    private string password = string.Empty;
+    private string errorLabel = string.Empty;
+    private bool isBusy;
+
+    private async Task LoginAsync()
+    {
+        errorLabel = string.Empty;
+        if (string.IsNullOrWhiteSpace(userName) || string.IsNullOrWhiteSpace(password))
+        {
+            errorLabel = "Please fill in both username and password.";
+            return;
+        }
+
+        isBusy = true;
+        try
+        {
+            // AuthProvider is registered as SimpleAuthProvider in Program.cs,
+            // so we cast to reach our own LoginAsync method.
+            await ((SimpleAuthProvider)AuthProvider).LoginAsync(userName, password);
+            navMgr.NavigateTo("/");
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            errorLabel = e.Message;
+        }
+        isBusy = false;
+    }
+}

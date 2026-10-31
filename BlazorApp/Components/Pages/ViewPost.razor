@@ -44,25 +44,35 @@
             {
                 @foreach (var comment in comments)
                 {
-                    <div class="comment">@comment.Body</div>
+                    <div class="comment">
+                        <div class="comment-author">@(comment.AuthorName ?? "Unknown user")</div>
+                        <div>@comment.Body</div>
+                    </div>
                 }
             }
 
-            <div class="panel comment-form">
-                @if (!string.IsNullOrEmpty(message))
-                {
-                    <div class="alert-msg error">@message</div>
-                }
+            <AuthorizeView>
+                <Authorized>
+                    <div class="panel comment-form">
+                        @if (!string.IsNullOrEmpty(message))
+                        {
+                            <div class="alert-msg error">@message</div>
+                        }
 
-                <div class="field">
-                    <label>Add a comment</label>
-                    <textarea @bind="commentBody" placeholder="Write a comment..."></textarea>
-                </div>
+                        <div class="field">
+                            <label>Add a comment</label>
+                            <textarea @bind="commentBody" placeholder="Write a comment..."></textarea>
+                        </div>
 
-                <button class="btn-main" @onclick="AddComment" disabled="@isSaving">
-                    @(isSaving ? "Posting..." : "Post comment")
-                </button>
-            </div>
+                        <button class="btn-main" @onclick="AddComment" disabled="@isSaving">
+                            @(isSaving ? "Posting..." : "Post comment")
+                        </button>
+                    </div>
+                </Authorized>
+                <NotAuthorized>
+                    <p class="muted"><a href="login">Log in</a> to write a comment.</p>
+                </NotAuthorized>
+            </AuthorizeView>
         </div>
     }
 </div>
@@ -70,6 +80,9 @@
 @code {
     [Parameter]
     public int id { get; set; }
+
+    // Given to us by <CascadingAuthenticationState> in Routes.razor
+    [CascadingParameter] public Task<AuthenticationState> AuthState { get; set; } = null!;
 
     private PostDto? post;
     private string authorName = "?";
@@ -111,8 +124,16 @@
         isSaving = true;
         try
         {
-            // No login yet, so every comment is written by user 1 (see assignment).
-            CreateCommentDto dto = new() { Body = commentBody, PostId = id, UserId = 1 };
+            int? userId = await AuthState.GetUserIdAsync();
+            if (userId is null)
+            {
+                message = "You must be logged in to comment.";
+                isSaving = false;
+                return;
+            }
+
+            // The logged-in user is the author of the comment
+            CreateCommentDto dto = new() { Body = commentBody, PostId = id, UserId = userId.Value };
             await commentService.AddCommentAsync(dto);
 
             comments = await commentService.GetCommentsFromPostAsync(id);

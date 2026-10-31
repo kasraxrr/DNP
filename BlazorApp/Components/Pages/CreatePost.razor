@@ -10,29 +10,42 @@
         <p>Share something with the forum.</p>
     </div>
 
-    <div class="panel">
-        @if (!string.IsNullOrEmpty(message))
-        {
-            <div class="alert-msg error">@message</div>
-        }
+    <AuthorizeView>
+        <Authorized>
+            <div class="panel">
+                @if (!string.IsNullOrEmpty(message))
+                {
+                    <div class="alert-msg error">@message</div>
+                }
 
-        <div class="field">
-            <label>Title</label>
-            <input type="text" @bind="title" placeholder="Give your post a title"/>
-        </div>
+                <div class="field">
+                    <label>Title</label>
+                    <input type="text" @bind="title" placeholder="Give your post a title"/>
+                </div>
 
-        <div class="field">
-            <label>Body</label>
-            <textarea @bind="body" placeholder="Write your post here..."></textarea>
-        </div>
+                <div class="field">
+                    <label>Body</label>
+                    <textarea @bind="body" placeholder="Write your post here..."></textarea>
+                </div>
 
-        <button class="btn-main" @onclick="Create" disabled="@isSaving">
-            @(isSaving ? "Publishing..." : "Publish post")
-        </button>
-    </div>
+                <button class="btn-main" @onclick="Create" disabled="@isSaving">
+                    @(isSaving ? "Publishing..." : "Publish post")
+                </button>
+            </div>
+        </Authorized>
+        <NotAuthorized>
+            <div class="panel empty-state">
+                <p>You'll have to log in to write a post.</p>
+                <a href="login" class="btn-main">Log in</a>
+            </div>
+        </NotAuthorized>
+    </AuthorizeView>
 </div>
 
 @code {
+    // Given to us by <CascadingAuthenticationState> in Routes.razor
+    [CascadingParameter] public Task<AuthenticationState> AuthState { get; set; } = null!;
+
     private string title = string.Empty;
     private string body = string.Empty;
     private string message = string.Empty;
@@ -51,8 +64,16 @@
         isSaving = true;
         try
         {
-            // No login yet, so every post is written by user 1 (see assignment).
-            CreatePostDto dto = new() { Title = title, Body = body, UserId = 1 };
+            int? userId = await AuthState.GetUserIdAsync();
+            if (userId is null)
+            {
+                message = "You must be logged in to write a post.";
+                isSaving = false;
+                return;
+            }
+
+            // The logged-in user is the author
+            CreatePostDto dto = new() { Title = title, Body = body, UserId = userId.Value };
             PostDto created = await postService.AddPostAsync(dto);
 
             navMgr.NavigateTo($"/ViewPost/{created.Id}");

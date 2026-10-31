@@ -8,7 +8,11 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\WebAPI\DTOs.csproj" />
+      <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="10.0.11" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\DTOs\DTOs.csproj" />
     </ItemGroup>
 
 </Project>
