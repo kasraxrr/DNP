@@ -1,6 +1,6 @@
 using System.Security.Claims;
 using System.Text.Json;
-using ApiContracts;
+using DTOs;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.JSInterop;
 

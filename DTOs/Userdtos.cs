@@ -1,4 +1,4 @@
-namespace ApiContracts;
+namespace DTOs;
 
 
 public class CreateUserDto
