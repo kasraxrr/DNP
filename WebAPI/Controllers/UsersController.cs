@@ -1,12 +1,13 @@
 using DTOs;
 using Entities;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using RepositoryContract;
 
 namespace WebAPI.Controllers;
 
 [ApiController]
-[Route("[controller]")] // -> /users
+[Route("[controller]")]
 public class UsersController : ControllerBase
 {
     private readonly IUserRepository userRepo;
@@ -16,58 +17,54 @@ public class UsersController : ControllerBase
         this.userRepo = userRepo;
     }
 
-    //Post/users
     [HttpPost]
     public async Task<ActionResult<UserDto>> AddUser([FromBody] CreateUserDto request)
     {
-        if (IsUserNameTaken(request.UserName))
+        if (await IsUserNameTakenAsync(request.UserName))
             return Conflict($"Username '{request.UserName}' is already taken");
 
         User user = new() { Username = request.UserName, Password = request.Password };
         User created = await userRepo.AddAsync(user);
 
-        UserDto dto = ToDto(created);
+        UserDto dto = new() { Id = created.Id, UserName = created.Username };
         return Created($"/users/{dto.Id}", dto);
     }
 
-    // PUT /users/5
     [HttpPut("{id:int}")]
     public async Task<ActionResult> UpdateUser([FromRoute] int id, [FromBody] UpdateUserDto request)
     {
-        User existing = await userRepo.GetSingleAsync(id); // throws if not found -> 404
- 
-        if (existing.Username != request.UserName && IsUserNameTaken(request.UserName))
+        User existing = await userRepo.GetSingleAsync(id);
+
+        if (existing.Username != request.UserName && await IsUserNameTakenAsync(request.UserName))
             return Conflict($"Username '{request.UserName}' is already taken");
- 
+
         existing.Username = request.UserName;
         existing.Password = request.Password;
         await userRepo.UpdateAsync(existing);
         return NoContent();
     }
 
-    // GET /users/5
     [HttpGet("{id:int}")]
     public async Task<ActionResult<UserDto>> GetUser([FromRoute] int id)
     {
         User user = await userRepo.GetSingleAsync(id);
-        return Ok(ToDto(user));
+        return Ok(new UserDto { Id = user.Id, UserName = user.Username });
     }
 
-    // GET /users            -> all users
-    // GET /users?userName=bo -> users whose name contains "bo"
     [HttpGet]
-    public ActionResult<IEnumerable<UserDto>> GetUsers([FromQuery] string? userName)
+    public async Task<ActionResult<IEnumerable<UserDto>>> GetUsers([FromQuery] string? userName)
     {
         IQueryable<User> users = userRepo.GetManyAsync();
 
         if (!string.IsNullOrWhiteSpace(userName))
-            users = users.Where(u => u.Username.Contains(userName, StringComparison.OrdinalIgnoreCase));
+            users = users.Where(u => u.Username.ToLower().Contains(userName.ToLower()));
 
-        List<UserDto> dtos = users.ToList().Select(ToDto).ToList();
+        List<UserDto> dtos = await users
+            .Select(u => new UserDto { Id = u.Id, UserName = u.Username })
+            .ToListAsync();
         return Ok(dtos);
     }
 
-    // DELETE /users/5
     [HttpDelete("{id:int}")]
     public async Task<ActionResult> DeleteUser([FromRoute] int id)
     {
@@ -75,15 +72,9 @@ public class UsersController : ControllerBase
         return NoContent();
     }
 
-    private bool IsUserNameTaken(string userName)
+    private Task<bool> IsUserNameTakenAsync(string userName)
     {
         return userRepo.GetManyAsync()
-            .Any(u => u.Username.Equals(userName, StringComparison.OrdinalIgnoreCase));
+            .AnyAsync(u => u.Username.ToLower() == userName.ToLower());
     }
-
-    private static UserDto ToDto(User user) => new()
-    {
-        Id = user.Id,
-        UserName = user.Username
-    };
 }

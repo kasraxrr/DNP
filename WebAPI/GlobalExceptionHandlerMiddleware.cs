@@ -1,4 +1,5 @@
 namespace WebAPI;
+using RepositoryContract;
 
 
 public class GlobalExceptionHandlerMiddleware : IMiddleware
@@ -10,7 +11,7 @@ public class GlobalExceptionHandlerMiddleware : IMiddleware
             await next(context);
         }
       
-        catch (InvalidOperationException ex)
+        catch (NotFoundException ex)
         {
             context.Response.StatusCode = 404;
             await context.Response.WriteAsync(ex.Message);

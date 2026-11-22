@@ -1,4 +1,4 @@
-using FileRepositories;
+using EfcRepositories;
 using RepositoryContract;
 using WebAPI;
 
@@ -10,9 +10,11 @@ builder.Services.AddOpenApi();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
-builder.Services.AddScoped<IPostRepository,PostFileRepository>();
-builder.Services.AddScoped<IUserRepository, UserFileRepository>();
-builder.Services.AddScoped<ICommentRepository, CommentFileRepository>();
+builder.Services.AddDbContext<AppDbContext>();
+
+builder.Services.AddScoped<IPostRepository, EfcPostRepository>();
+builder.Services.AddScoped<IUserRepository, EfcUserRepository>();
+builder.Services.AddScoped<ICommentRepository, EfcCommentRepository>();
 
 
 

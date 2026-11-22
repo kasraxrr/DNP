@@ -1,13 +1,13 @@
 using DTOs;
-using DTOs;
 using Entities;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using RepositoryContract;
 
 namespace WebAPI.Controllers;
 
 [ApiController]
-[Route("[controller]")] // -> /posts
+[Route("[controller]")]
 public class PostsController : ControllerBase
 {
     private readonly IPostRepository postRepo;
@@ -21,122 +21,140 @@ public class PostsController : ControllerBase
         this.commentRepo = commentRepo;
     }
 
-    // POST /posts
     [HttpPost]
     public async Task<ActionResult<PostDto>> AddPost([FromBody] CreatePostDto request)
     {
-        if (!userRepo.GetManyAsync().Any(u => u.Id == request.UserId))
+        User? author = await userRepo.GetManyAsync().SingleOrDefaultAsync(u => u.Id == request.UserId);
+        if (author is null)
             return BadRequest($"User with id {request.UserId} does not exist");
 
         Post post = new() { Title = request.Title, Body = request.Body, UserId = request.UserId };
         Post created = await postRepo.AddAsync(post);
 
-        PostDto dto = ToDto(created, GetUserNames());
+        // Return a DTO, not the entity: Post -> User -> Posts -> ... is a cycle
+        PostDto dto = new()
+        {
+            Id = created.Id,
+            Title = created.Title,
+            Body = created.Body,
+            UserId = created.UserId,
+            AuthorName = author.Username
+        };
         return Created($"/posts/{dto.Id}", dto);
     }
 
-    // PUT /posts/5
     [HttpPut("{id:int}")]
     public async Task<ActionResult> UpdatePost([FromRoute] int id, [FromBody] UpdatePostDto request)
     {
-        Post existing = await postRepo.GetSingleAsync(id); // throws if not found -> 404
+        Post existing = await postRepo.GetSingleAsync(id);
         existing.Title = request.Title;
         existing.Body = request.Body;
         await postRepo.UpdateAsync(existing);
         return NoContent();
     }
 
-    // GET /posts/5
-    // GET /posts/5?includeComments=true
+    // One SQL query that also loads the author and, if asked, the comments
     [HttpGet("{id:int}")]
     public async Task<ActionResult<PostDto>> GetPost([FromRoute] int id, [FromQuery] bool includeComments = false)
     {
-        Post post = await postRepo.GetSingleAsync(id);
-        Dictionary<int, string> userNames = GetUserNames();
-        PostDto dto = ToDto(post, userNames);
+        IQueryable<Post> queryForPost = postRepo.GetManyAsync()
+            .Where(p => p.Id == id)
+            .Include(p => p.User);
 
+        PostDto? dto;
         if (includeComments)
-            dto.Comments = GetCommentsForPost(id, userNames);
+        {
+            dto = await queryForPost
+                .Include(p => p.Comments)
+                .Select(p => new PostDto
+                {
+                    Id = p.Id,
+                    Title = p.Title,
+                    Body = p.Body,
+                    UserId = p.UserId,
+                    AuthorName = p.User.Username,
+                    Comments = p.Comments.Select(c => new CommentDto
+                    {
+                        Id = c.Id,
+                        Body = c.Body,
+                        UserId = c.UserId,
+                        PostId = c.PostId,
+                        AuthorName = c.User.Username
+                    }).ToList()
+                })
+                .FirstOrDefaultAsync();
+        }
+        else
+        {
+            dto = await queryForPost
+                .Select(p => new PostDto
+                {
+                    Id = p.Id,
+                    Title = p.Title,
+                    Body = p.Body,
+                    UserId = p.UserId,
+                    AuthorName = p.User.Username
+                })
+                .FirstOrDefaultAsync();
+        }
 
-        return Ok(dto);
+        return dto is null ? NotFound($"Post with id {id} not found") : Ok(dto);
     }
 
-    // GET /posts
-    // GET /posts?title=hello&userId=2
-    // GET /posts?userName=bob
     [HttpGet]
-    public ActionResult<IEnumerable<PostDto>> GetPosts(
+    public async Task<ActionResult<IEnumerable<PostDto>>> GetPosts(
         [FromQuery] string? title,
         [FromQuery] int? userId,
         [FromQuery] string? userName)
     {
         IQueryable<Post> posts = postRepo.GetManyAsync();
-        Dictionary<int, string> userNames = GetUserNames();
 
         if (!string.IsNullOrWhiteSpace(title))
-            posts = posts.Where(p => p.Title.Contains(title, StringComparison.OrdinalIgnoreCase));
+            posts = posts.Where(p => p.Title.ToLower().Contains(title.ToLower()));
 
         if (userId is not null)
             posts = posts.Where(p => p.UserId == userId);
 
         if (!string.IsNullOrWhiteSpace(userName))
-        {
-            List<int> matchingUserIds = userNames
-                .Where(kv => kv.Value.Contains(userName, StringComparison.OrdinalIgnoreCase))
-                .Select(kv => kv.Key)
-                .ToList();
-            posts = posts.Where(p => matchingUserIds.Contains(p.UserId));
-        }
+            posts = posts.Where(p => p.User.Username.ToLower().Contains(userName.ToLower()));
 
-        List<PostDto> dtos = posts.ToList().Select(p => ToDto(p, userNames)).ToList();
+        List<PostDto> dtos = await posts
+            .Select(p => new PostDto
+            {
+                Id = p.Id,
+                Title = p.Title,
+                Body = p.Body,
+                UserId = p.UserId,
+                AuthorName = p.User.Username
+            })
+            .ToListAsync();
         return Ok(dtos);
     }
 
-    // GET /posts/5/comments  (comments "belong to" a post)
     [HttpGet("{id:int}/comments")]
     public async Task<ActionResult<IEnumerable<CommentDto>>> GetCommentsOfPost([FromRoute] int id)
     {
-        await postRepo.GetSingleAsync(id); // 404 if the post doesn't exist
-        return Ok(GetCommentsForPost(id, GetUserNames()));
-    }
+        if (!await postRepo.GetManyAsync().AnyAsync(p => p.Id == id))
+            return NotFound($"Post with id {id} not found");
 
-    // DELETE /posts/5
-    [HttpDelete("{id:int}")]
-    public async Task<ActionResult> DeletePost([FromRoute] int id)
-    {
-        await postRepo.DeleteAsync(id);
-        return NoContent();
-    }
-
-    // ---------- helpers ----------
-
-    private Dictionary<int, string> GetUserNames()
-    {
-        return userRepo.GetManyAsync().ToDictionary(u => u.Id, u => u.Username);
-    }
-
-    private List<CommentDto> GetCommentsForPost(int postId, Dictionary<int, string> userNames)
-    {
-        return commentRepo.GetManyAsync()
-            .Where(c => c.PostId == postId)
-            .ToList()
+        List<CommentDto> comments = await commentRepo.GetManyAsync()
+            .Where(c => c.PostId == id)
             .Select(c => new CommentDto
             {
                 Id = c.Id,
                 Body = c.Body,
                 UserId = c.UserId,
                 PostId = c.PostId,
-                AuthorName = userNames.GetValueOrDefault(c.UserId)
+                AuthorName = c.User.Username
             })
-            .ToList();
+            .ToListAsync();
+        return Ok(comments);
     }
 
-    private static PostDto ToDto(Post post, Dictionary<int, string> userNames) => new()
+    [HttpDelete("{id:int}")]
+    public async Task<ActionResult> DeletePost([FromRoute] int id)
     {
-        Id = post.Id,
-        Title = post.Title,
-        Body = post.Body,
-        UserId = post.UserId,
-        AuthorName = userNames.GetValueOrDefault(post.UserId)
-    };
+        await postRepo.DeleteAsync(id);
+        return NoContent();
+    }
 }
